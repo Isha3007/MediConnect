@@ -4,6 +4,8 @@ from typing import Dict
 
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from flask_restx import Resource
+from langchain_pinecone import PineconeVectorStore
+from vectorstore import index, embeddings, index_name
 from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_ollama import OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -11,12 +13,14 @@ from patient.ocr import perform_ocr
 from werkzeug.datastructures import FileStorage
 
 from extensions import CustomParser
-from langchain_pinecone import PineconeVectorStore
-
-from vectorstore import index, embeddings, index_name
 
 from . import ns
 from .serializer import patient_otp_model
+
+# oye, this below 3 lines used for pdf uploads
+from PyPDF2 import PdfReader
+from pdf2image import convert_from_bytes
+from io import BytesIO
 
 @dataclass()
 class UserData:
@@ -56,6 +60,7 @@ class GenerateOTPRoute(Resource):
 
         return {"otp": otp, "access_token": create_access_token(email)}
 
+
 @ns.route("/upload")
 class UploadRoute(Resource):
     _upload_parser = CustomParser()
@@ -64,23 +69,54 @@ class UploadRoute(Resource):
     @ns.expect(_upload_parser)
     @jwt_required()
     def post(self):
-
         email = get_jwt_identity()
         args = self._upload_parser.parse_args(strict=True)
         file: FileStorage = args.get("file")
 
-        if file.content_type == "image/jpeg" or file.content_type == "image/png":
-            text = perform_ocr(file.stream.read())
+        file_bytes = file.stream.read()
+
+        # oye, 1. IMAGE FILES (OCR)
+        if file.content_type in ["image/jpeg", "image/jpg", "image/png", "image/webp"]:
+            text = perform_ocr(file_bytes)
+
+        
+        # oye, 2. PDF FILES
+        elif file.content_type == "application/pdf":
+            text = ""
+
+            # Try text-based extraction
+            try:
+                reader = PdfReader(BytesIO(file_bytes))
+                for page in reader.pages:
+                    page_text = page.extract_text() or ""
+                    text += page_text
+            except Exception:
+                text = ""
+
+            # If no text → scanned PDF → OCR per page
+            if len(text.strip()) < 20:
+                print(">>> Scanned PDF detected — using OCR")
+                images = convert_from_bytes(file_bytes)
+
+                for img in images:
+                    img_bytes = BytesIO()
+                    img.save(img_bytes, format="PNG")
+                    text += perform_ocr(img_bytes.getvalue()) + "\n"
+
+        #oye, 3. TEXT FILES
         elif file.content_type == "text/plain":
-            text = perform_ocr(file.stream.read())
+            text = file_bytes.decode("utf-8")
+
         else:
             return ns.abort(400, "Error: File type not supported.")
+
 
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         all_splits = text_splitter.split_text(text)
 
-        patient_id = email.split("@")[0].replace(".", "")
+        data_mapping[email].files.add_texts(all_splits)
 
+        patient_id = email.split("@")[0].replace(".", "")
 
         PineconeVectorStore.from_texts(
             texts=all_splits,
@@ -88,6 +124,5 @@ class UploadRoute(Resource):
             index_name=index_name,
             namespace=patient_id
         )
-
+        
         return "Done uploading file"
-
