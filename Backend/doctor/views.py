@@ -14,11 +14,14 @@ from flask_jwt_extended import get_jwt_identity, create_access_token, jwt_requir
 from extensions import CustomParser
 from doctor.serializer import patient_details_model
 from patient.views import data_mapping, otp_mapping
+import shared.globals as globals
+
 from extensions import CustomParser
 from doctor.appointment import send_appointment_reminder
 from .report_summarizer import summarize
 from . import ns
 from vectorstore import PINECONE_API_KEY, index, embeddings, index_name
+from .auth import verify_doctor_login, register_doctor,get_doctor_id
 
 
 llm = init_chat_model("llama-3.1-8b-instant", model_provider="groq")
@@ -79,7 +82,7 @@ class AskRoute(Resource):
 
         Rules:
         - NO text outside the JSON.
-        - Use ONLY the provided context.
+        - Use ONLY the provided context. 
         - The "answer" must be written as a clear, natural sentence (not a direct quote).
         - If context is insufficient, answer:
         "Insufficient evidence to answer the question."        
@@ -177,21 +180,64 @@ class PatientDetailsRoute(Resource):
 
         return user_details
 
+@ns.route("/doctor-login")
+class DoctorLoginRoute(Resource):
+    _doctor_login_parser = CustomParser()
+    _doctor_login_parser.add_argument("email", type=str, required=True)
+    _doctor_login_parser.add_argument("password", type=str, required=True)
+
+    @ns.expect(_doctor_login_parser)
+    def post(self):
+        args = self._doctor_login_parser.parse_args(strict=True)
+        email = args.get("email")
+        password = args.get("password")
+
+        if not verify_doctor_login(email, password):
+            return {"error": "Invalid credentials"}, 401
+
+        doctor_id = get_doctor_id(email)
+        print(f"Doctor ID {doctor_id} logged in successfully.")
+        return {
+            "message": "Login successful",
+            "doctor_id": doctor_id
+        }
+
+
+@ns.route("/register-doctor")
+class RegisterDoctorRoute(Resource):
+    _reg_parser = CustomParser()
+    _reg_parser.add_argument("email", type=str, required=True)
+    _reg_parser.add_argument("password", type=str, required=True)
+
+    @ns.expect(_reg_parser)
+    def post(self):
+        args = self._reg_parser.parse_args(strict=True)
+
+        if register_doctor(args["email"], args["password"]):
+            return {"message": "Doctor registered successfully"}
+
+        return {"error": "Doctor already exists or DB error"}, 400
 
 @ns.route("/verify-otp")
 class VerifyOtpRoute(Resource):
     _verify_otp_parser = CustomParser()
     _verify_otp_parser.add_argument("otp", type=int)
+    _verify_otp_parser.add_argument("doctor_id", type=int, required=True)
+
 
     @ns.expect(_verify_otp_parser)
     def post(self):
         args = self._verify_otp_parser.parse_args(strict=True)
         otp = args.get("otp")
-
+        doctor_logged_in = args.get("doctor_id")
+        print(f"Doctor ID attempting access: {doctor_logged_in}")
         if otp not in otp_mapping:
             return ns.abort(400, "Error: Invalid OTP entered.")
 
-        email = otp_mapping.pop(otp)
+        email= otp_mapping.pop(otp)
+        print(f"OTP verifing for selected doctor: {globals.selected_doctor_id}")
+        if doctor_logged_in != globals.selected_doctor_id:
+            return ns.abort(403, "Error: This Doctor does not have access to patient records.")
         access_token = create_access_token(email)
 
         return {"access_token": access_token}

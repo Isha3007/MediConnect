@@ -15,6 +15,7 @@ export default function PatientPage() {
 
   useEffect(() => {
     const storedOtp = window.localStorage.getItem("otp");
+    
     window.localStorage.removeItem("otp");
 
     if (storedOtp)

@@ -11,7 +11,7 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from patient.ocr import perform_ocr
 from werkzeug.datastructures import FileStorage
-
+import shared.globals as globals
 from extensions import CustomParser
 
 from . import ns
@@ -36,6 +36,32 @@ otp_mapping: Dict[int, str] = {}
 data_mapping: Dict[str, UserData] = {}
 
 
+from doctor.auth import get_all_doctors  # <-- add get_all_doctors
+
+@ns.route("/list")
+class DoctorListRoute(Resource):
+    _doctor_parser = CustomParser()
+    _doctor_parser.add_argument("doctor_id", type=int)
+
+    def get(self):
+        doctors = get_all_doctors()
+        return {"doctors": doctors}
+
+    @ns.expect(_doctor_parser)
+    def post(self):
+        args = self._doctor_parser.parse_args(strict=True)
+
+        doctor_id = args.get("doctor_id")
+        globals.selected_doctor_id = doctor_id
+        print(f"Selected doctor ID set to: {globals.selected_doctor_id}")
+
+        # store globally
+
+
+
+        return {"message": "Doctor selection saved", "doctor_id": doctor_id}
+
+
 @ns.route("/generate-otp")
 class GenerateOTPRoute(Resource):
     _generate_otp_parser = CustomParser()
@@ -52,11 +78,13 @@ class GenerateOTPRoute(Resource):
         name = args.get("name")
         email = args.get("email")
         picture = args.get("picture")
+        
 
         user_data = UserData(name, picture)
 
         otp_mapping[otp] = email
         data_mapping[email] = user_data
+
 
         return {"otp": otp, "access_token": create_access_token(email)}
 

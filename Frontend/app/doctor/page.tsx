@@ -21,17 +21,26 @@ export default function DoctorPage() {
     setIsLoading(true);
 
     try {
+      const storedDoctorId = localStorage.getItem("doctor_id");
+
+      if (!storedDoctorId) {
+      alert("No doctor selected for this session.");
+  return;
+}
       const res = await fetch("http://localhost:5000/api/v1/doctor/verify-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ otp: parseInt(otp, 10) }),
+        body: JSON.stringify({ otp: parseInt(otp, 10),
+            doctor_id: parseInt(storedDoctorId, 10)
+
+         }),
       });
 
       if (!res.ok) {
         const errorData = await res.json();
-        alert(errorData.message || "Invalid OTP");
+        alert(errorData.message || "Invalid OTP or Doctor ID. Please try again.");
         setIsLoading(false);
         return;
       }

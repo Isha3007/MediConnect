@@ -57,7 +57,9 @@ export default function LandingPage() {
         window.localStorage.setItem("otp", userData.otp);
         window.localStorage.setItem("token", userData.access_token);
 
-        window.location.href = "/patient";
+        // window.location.href = "/patient";
+        window.location.href = "/patient/doctor_list";
+
       },
     })
 
@@ -102,7 +104,7 @@ export default function LandingPage() {
             Enter the patient's OTP code to access their medical files and chat
           </CardContent>
           <CardFooter>
-            <a href="/doctor" className="w-full">
+            <a href="/doctor/login" className="w-full">
               <Button className="w-full bg-red-600 hover:bg-red-700">Login as Doctor</Button>
             </a>
           </CardFooter>
