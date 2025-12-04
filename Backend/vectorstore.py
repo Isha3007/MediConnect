@@ -2,7 +2,7 @@
 from pinecone import Pinecone, ServerlessSpec
 from langchain_ollama import OllamaEmbeddings
 
-PINECONE_API_KEY = "pcsk_2opvqo_S2iK86qTXpwYZT819vyvMVymYjCSS34CZ76mhNJorahitiXhS8JLr7b8joZjyhS"
+PINECONE_API_KEY = ""
 index_name = "patient-index"
 
 # Initialize Pinecone client
