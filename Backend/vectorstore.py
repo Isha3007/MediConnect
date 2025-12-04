@@ -1,6 +1,5 @@
-
-from pinecone import Pinecone, ServerlessSpec
 from langchain_ollama import OllamaEmbeddings
+from pinecone import Pinecone, ServerlessSpec
 
 PINECONE_API_KEY = ""
 index_name = "patient-index"
@@ -14,10 +13,7 @@ if index_name not in pc.list_indexes().names():
         name=index_name,
         dimension=768,
         metric="cosine",
-        spec=ServerlessSpec(
-            cloud="aws",
-            region="us-east-1"
-        )
+        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
     )
 
 # Connect to index
@@ -25,4 +21,3 @@ index = pc.Index(index_name)
 
 # Embedding model
 embeddings = OllamaEmbeddings(model="nomic-embed-text")
-

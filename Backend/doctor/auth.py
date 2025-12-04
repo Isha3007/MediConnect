@@ -1,38 +1,45 @@
-import sqlite3
 import hashlib
 import os
+import sqlite3
 
 DB_PATH = "doctor_auth.db"
 
 from flask_restx import Resource
+
 from . import ns
+
 
 # Returns list of doctors
 def init_doctor_db():
     """Create doctor table if not exists"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
     CREATE TABLE IF NOT EXISTS doctors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE,
         password_hash TEXT
     )
-    """)
+    """
+    )
     conn.commit()
     conn.close()
 
 
 def hash_password(password: str):
     """Return salted hash"""
-    salt = os.getenv("DOC_SALT", "static_salt")  
+    salt = os.getenv("DOC_SALT", "static_salt")
     return hashlib.sha256((password + salt).encode()).hexdigest()
+
 
 def get_all_doctors():
     """Return list of all doctors"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, email FROM doctors")  # you can also add name if schema updated
+    cursor.execute(
+        "SELECT id, email FROM doctors"
+    )  # you can also add name if schema updated
     rows = cursor.fetchall()
     conn.close()
 
@@ -48,7 +55,7 @@ def register_doctor(email: str, password: str):
 
         cursor.execute(
             "INSERT INTO doctors (email, password_hash) VALUES (?, ?)",
-            (email, hash_password(password))
+            (email, hash_password(password)),
         )
 
         conn.commit()
@@ -57,11 +64,11 @@ def register_doctor(email: str, password: str):
         doctor_id = cursor.lastrowid
 
         conn.close()
-        return doctor_id   # ← return ID instead of True
+        return doctor_id  # ← return ID instead of True
 
     except Exception as e:
         print("Registration error:", e)
-        return None   # return None on failure
+        return None  # return None on failure
 
 
 def verify_doctor_login(email: str, password: str):

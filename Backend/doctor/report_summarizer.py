@@ -1,6 +1,7 @@
 import os
 
 import requests
+
 SYSTEM_PROMPT = """ 
 You are a clinical documentation specialist. You will receive a list of raw medical document texts related to a single patient (lab reports, discharge summaries, prescriptions, clinical notes, radiology findings, etc.). Your task is to extract, clean, and summarize the information into a concise, medically accurate, and well-formatted patient report. Follow the structure and instructions below strictly.
 
@@ -64,6 +65,7 @@ _All information above is extracted solely from the provided documents._
 """
 
 groq_api_key = os.getenv("GROQ_API_KEY")
+
 
 def parse_response(response_json):
     return response_json.get("choices", [{}])[0].get("message", {}).get("content", "")
