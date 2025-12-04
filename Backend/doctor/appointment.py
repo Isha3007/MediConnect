@@ -1,17 +1,21 @@
-from email.message import EmailMessage
-import smtplib
 import os
+import smtplib
 from datetime import datetime, timedelta
+from email.message import EmailMessage
 from urllib.parse import quote
+
 import pytz
 
-SENDER_EMAIL = os.getenv('SENDER_EMAIL')
-SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
 
-def send_appointment_reminder(email, appointment_date, timezone=None, timezone_offset=None):
+
+def send_appointment_reminder(
+    email, appointment_date, timezone=None, timezone_offset=None
+):
     # Parse the appointment date
     appointment_date_obj = datetime.strptime(appointment_date, "%Y-%m-%d")
-    
+
     # Handle timezone conversion
     if timezone:
         try:
@@ -24,13 +28,14 @@ def send_appointment_reminder(email, appointment_date, timezone=None, timezone_o
                 # Convert timezone offset from minutes to hours
                 offset_hours = timezone_offset / 60
                 from datetime import timezone as dt_timezone
+
                 tz = dt_timezone(timedelta(hours=offset_hours))
                 appointment_date_obj = appointment_date_obj.replace(tzinfo=tz)
-    
+
     # Set appointment time (9:00 AM in the user's timezone)
     start_time = appointment_date_obj.replace(hour=9, minute=0, second=0, microsecond=0)
     end_time = start_time + timedelta(hours=1)
-    
+
     # Convert to UTC for Google Calendar (it expects UTC times)
     if start_time.tzinfo is not None:
         start_time_utc = start_time.astimezone(pytz.UTC)
@@ -38,14 +43,14 @@ def send_appointment_reminder(email, appointment_date, timezone=None, timezone_o
     else:
         start_time_utc = start_time
         end_time_utc = end_time
-    
+
     start_time_google = start_time_utc.strftime("%Y%m%dT%H%M%SZ")
     end_time_google = end_time_utc.strftime("%Y%m%dT%H%M%SZ")
-    
+
     event_title = "Appointment with Healthcare Team"
     event_details = "This is a reminder for your appointment scheduled."
     event_location = "Your Healthcare Location"
-    
+
     text = quote(event_title)
     dates = quote(f"{start_time_google}/{end_time_google}")
     details = quote(event_details)
@@ -55,11 +60,11 @@ def send_appointment_reminder(email, appointment_date, timezone=None, timezone_o
         f"https://www.google.com/calendar/render?action=TEMPLATE&text={text}"
         f"&dates={dates}&details={details}&location={location}"
     )
-    
+
     message = EmailMessage()
-    message['Subject'] = "Appointment Reminder"
-    message['From'] = SENDER_EMAIL
-    message['To'] = email
+    message["Subject"] = "Appointment Reminder"
+    message["From"] = SENDER_EMAIL
+    message["To"] = email
 
     # Format readable date and time in user's timezone
     readable_date = start_time.strftime("%A, %B %d, %Y")
@@ -141,10 +146,10 @@ Your Healthcare Team
 """
 
     message.set_content(plain_text)
-    message.add_alternative(html_content, subtype='html')
+    message.add_alternative(html_content, subtype="html")
 
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         server.send_message(message)

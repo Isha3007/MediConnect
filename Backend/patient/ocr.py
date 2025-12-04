@@ -1,7 +1,8 @@
 import base64
 import os
-import requests
 import re
+
+import requests
 
 groq_api_key = os.getenv("GROQ_API_KEY")
 
@@ -16,11 +17,14 @@ Please follow these guidelines to ensure the transcription is as correct as poss
 7. Do NOT summarize.
 """
 
+
 def encode_image_to_base64(image):
     return base64.b64encode(image).decode("utf-8")
 
+
 def parse_response(response_json):
     return response_json.get("choices", [{}])[0].get("message", {}).get("content", "")
+
 
 def perform_ocr(image):
     base64_image = encode_image_to_base64(image)
@@ -37,9 +41,12 @@ def perform_ocr(image):
                     "role": "user",
                     "content": [
                         {"type": "text", "text": SYSTEM_PROMPT},
-                        {"type": "image_url", "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}"
-                        }},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            },
+                        },
                     ],
                 }
             ],
@@ -66,7 +73,6 @@ def perform_ocr(image):
         r"\bAC\b": "before meals",
         r"\bPC\b": "after meals",
         r"\bSTAT\b": "immediately",
-
         # Dosage schedules (strict detection)
         r"\b1\s*[-–—]\s*0\s*[-–—]\s*1\b": "one in the morning, none in the afternoon, one at night",
         r"\b1\s*[-–—]\s*1\s*[-–—]\s*1\b": "one in the morning, one in the afternoon, one at night",
@@ -79,6 +85,8 @@ def perform_ocr(image):
     expanded_text = raw_text
 
     for pattern, meaning in abbrev_map.items():
-        expanded_text = re.sub(pattern, lambda m: f"{m.group(0)} ({meaning})", expanded_text)
+        expanded_text = re.sub(
+            pattern, lambda m: f"{m.group(0)} ({meaning})", expanded_text
+        )
 
     return expanded_text

@@ -1,26 +1,28 @@
 import random
 from dataclasses import dataclass
+from io import BytesIO
 from typing import Dict
 
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from flask_restx import Resource
-from langchain_pinecone import PineconeVectorStore
-from vectorstore import index, embeddings, index_name
 from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_ollama import OllamaEmbeddings
+from langchain_pinecone import PineconeVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from patient.ocr import perform_ocr
+from pdf2image import convert_from_bytes
+
+# oye, this below 3 lines used for pdf uploads
+from PyPDF2 import PdfReader
 from werkzeug.datastructures import FileStorage
+
 import shared.globals as globals
 from extensions import CustomParser
+from patient.ocr import perform_ocr
+from vectorstore import embeddings, index, index_name
 
 from . import ns
 from .serializer import patient_otp_model
 
-# oye, this below 3 lines used for pdf uploads
-from PyPDF2 import PdfReader
-from pdf2image import convert_from_bytes
-from io import BytesIO
 
 @dataclass()
 class UserData:
@@ -37,6 +39,7 @@ data_mapping: Dict[str, UserData] = {}
 
 
 from doctor.auth import get_all_doctors  # <-- add get_all_doctors
+
 
 @ns.route("/list")
 class DoctorListRoute(Resource):
@@ -57,8 +60,6 @@ class DoctorListRoute(Resource):
 
         # store globally
 
-
-
         return {"message": "Doctor selection saved", "doctor_id": doctor_id}
 
 
@@ -78,13 +79,11 @@ class GenerateOTPRoute(Resource):
         name = args.get("name")
         email = args.get("email")
         picture = args.get("picture")
-        
 
         user_data = UserData(name, picture)
 
         otp_mapping[otp] = email
         data_mapping[email] = user_data
-
 
         return {"otp": otp, "access_token": create_access_token(email)}
 
@@ -107,7 +106,6 @@ class UploadRoute(Resource):
         if file.content_type in ["image/jpeg", "image/jpg", "image/png", "image/webp"]:
             text = perform_ocr(file_bytes)
 
-        
         # oye, 2. PDF FILES
         elif file.content_type == "application/pdf":
             text = ""
@@ -131,15 +129,16 @@ class UploadRoute(Resource):
                     img.save(img_bytes, format="PNG")
                     text += perform_ocr(img_bytes.getvalue()) + "\n"
 
-        #oye, 3. TEXT FILES
+        # oye, 3. TEXT FILES
         elif file.content_type == "text/plain":
             text = file_bytes.decode("utf-8")
 
         else:
             return ns.abort(400, "Error: File type not supported.")
 
-
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, chunk_overlap=200
+        )
         all_splits = text_splitter.split_text(text)
 
         data_mapping[email].files.add_texts(all_splits)
@@ -150,7 +149,7 @@ class UploadRoute(Resource):
             texts=all_splits,
             embedding=embeddings,
             index_name=index_name,
-            namespace=patient_id
+            namespace=patient_id,
         )
-        
+
         return "Done uploading file"

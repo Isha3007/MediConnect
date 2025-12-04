@@ -1,5 +1,6 @@
-from . import ns
 from flask_restx import fields
+
+from . import ns
 
 patient_details_model = ns.model(
     "PatientDetailsModel",

@@ -1,8 +1,11 @@
 import os
-from doctor.auth import init_doctor_db, register_doctor
+
 from dotenv import load_dotenv
 
+from doctor.auth import init_doctor_db, register_doctor
+
 load_dotenv()
+
 
 def add_default_doctors():
     """Add default doctors only if they don't exist"""
@@ -20,6 +23,7 @@ def add_default_doctors():
             print(f"Added doctor: {email}")
         else:
             print(f"Doctor {email} already exists or DB error")
+
 
 if __name__ == "__main__":
     # Step 1: Create the table if it doesn't exist

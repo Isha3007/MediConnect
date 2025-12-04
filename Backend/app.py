@@ -1,21 +1,22 @@
 from dotenv import load_dotenv
 from flask import Blueprint, Flask
 
+import doctor
 import errors
 import patient
-import doctor
 from extensions import api, cors, jwt
 from settings import Config
+
 # from doctor.auth import init_doctor_db, register_doctor
 
 
 def create_app(*args, **kwargs):
     load_dotenv()
-    
+
     app = Flask(__name__)
     app.config.from_object(obj=Config)
     app.url_map.strict_slashes = False
-     # Initialize doctor db
+    # Initialize doctor db
     # init_doctor_db()
 
     # Add default doctors if not exist
@@ -48,6 +49,7 @@ def register_blueprints(app: Flask):
     api.init_app(blueprint)
     app.register_blueprint(blueprint)
     app.register_blueprint(errors.views.blueprint)
+
 
 # def add_default_doctors():
 #     """Add default doctors only once"""

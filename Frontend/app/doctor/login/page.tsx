@@ -39,7 +39,7 @@ export default function DoctorLogin() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <Input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+          <Input placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
           <Input placeholder="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} />
         </CardContent>
 
