@@ -98,6 +98,3 @@ http://127.0.0.1:8000
 
 ---
 
-<img width="1031" height="523" alt="image" src="https://github.com/user-attachments/assets/df2d7bd0-056e-4e0e-9e8d-2e9804140ff0" />
-
-<img width="1018" height="520" alt="image" src="https://github.com/user-attachments/assets/0a122e45-31fc-462f-839a-23211eb10888" />
